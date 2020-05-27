@@ -40,3 +40,8 @@ class User(db.Model):
             return f"{first_name} {last_name}"
         else:
             return None
+
+    # @classmethod
+    # def validate_email(self, field):
+    #     if User.query.filter_by(email=field.data).first():
+    #         raise ValidationError('Email already registered.')

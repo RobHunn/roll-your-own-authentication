@@ -1,6 +1,6 @@
 """Roll your own auth application"""
 
-from flask import Flask, request, redirect, render_template, url_for, flash
+from flask import Flask, request, redirect, render_template, url_for, flash, json, jsonify
 from models import db, connect_db, User
 from form import RegUserForm
 from flask_debugtoolbar import DebugToolbarExtension
@@ -13,7 +13,6 @@ from shhh import dbconstr, victoriasecret
 #                 ^^^ SET ENV VARS ^^^                        #
 ###############################################################
 
-WTF_CSRF_SECRET_KEY = 'a_random_string'
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = f"{victoriasecret}"
@@ -34,9 +33,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 connect_db(app)
 
-db.session.rollback()
-db.drop_all()
-db.create_all()
+# db.session.rollback()
+# db.drop_all()
+# db.create_all()
 
 
 @app.errorhandler(404)
@@ -50,33 +49,49 @@ def home():
     return render_template("home.html", form=form)
 
 
-@app.route('/secret/<user>')
+@app.route('/secret/<string:user>')
 def secret_page(user):
+    user = (
+        db.session.query(
+            User.first_name,
+            User.last_name,
+            User.username,
+            User.email
+        )
+        .filter(User.username == user)
+        .first()
+    )
     return render_template('secret.html', user=user)
 
 
-@app.route("/api/reg_user", methods=['GET', 'POST'])
+@app.route("/api/reg_user", methods=['POST'])
 def reg_user():
     form = RegUserForm()
     if form.validate_on_submit():
-        res = requests.get(url, params=params, headers={method: 'POST'})
-        print(res)
         new_user = User(
-            username=request.json['username'],
-            first_name=request.json['first_name'],
-            last_name=request.json['last_name'],
-            email=request.json['email'],
-            password=request.json['password']
+            username=request.form['username'],
+            first_name=request.form['first_name'],
+            last_name=request.form['last_name'],
+            email=request.form['email'],
+            password=request.form['password'],
         )
-        db.session.add(new_user)
-        db.session.commit()
-        flash(
-            f"User created, first={new_user.first_name}, last={new_user.last_name}, email={new_user.email} username={new_user.username}"
-        )
-        return redirect(url_for("secret"), user=new_user)
+        if new_user:
+            db.session.add(new_user)
+            db.session.commit()
+            flash(
+                f"User created, first={new_user.first_name}, last={new_user.last_name}, email={new_user.email} username={new_user.username}"
+            )
+            print('********** redirecting now')
+            return redirect(url_for("secret_page", user=new_user.username))
+        else:
+            db.session.rollback()
+            print('errorrrrrr')
+            return redirect(url_for('home'))
+
     else:
-        return render_template("home", form=form)
+        print('form not vaildated')
+        return render_template('home.html', form=form)
 
 
-if __name__ == "__main__":
-    app.run()
+# if __name__ == "__main__":
+#     app.run()
