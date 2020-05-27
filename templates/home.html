@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %} Home page {% endblock title %}
+{% block content %}
+
+{% for msg in get_flashed_messages() %}
+<p>
+    {{msg}}
+</p>
+{% endfor %}
+
+<h1>REGISTER</h1>
+
+<form id="reg_form">
+    {% include "_form.html" %}
+    <button>Submit</button>
+</form>
+
+{% endblock content %}
