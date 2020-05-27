@@ -1,5 +1,4 @@
 from flask_wtf import FlaskForm
-# from flask_wtf.file import FileField, FileRequired
 from wtforms import StringField, PasswordField
 from wtforms.validators import InputRequired, Email, Length
 from werkzeug.utils import secure_filename
@@ -47,11 +46,14 @@ class RegUserForm(FlaskForm):
     )
 
 
-# images = UploadSet('images', IMAGES)
+class LoginForm(FlaskForm):
+    """Login form."""
 
-
-# class UploadForm(FlaskForm):
-#     upload = FileField('image', validators=[
-#         FileRequired(message="Plese use a vaild file"),
-#         FileAllowed(images, message='Images only!')
-#     ])
+    username = StringField(
+        "Username",
+        validators=[InputRequired(), Length(min=1, max=20)],
+    )
+    password = PasswordField(
+        "Password",
+        validators=[InputRequired(), Length(min=6, max=55)],
+    )
