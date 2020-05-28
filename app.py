@@ -88,13 +88,13 @@ def register():
         try:
             db.session.commit()
         except IntegrityError:
+            db.session.rollback()
             if User.query.get(username):
-                db.session.rollback()
                 form.username.errors.append(
                     'Username already taken! #seatsTaken!')
                 return render_template('register.html', form=form)
 
-            elif User.query.get(username):
+            elif User.query.get(email):
                 db.session.rollback()
                 form.email.errors.append('email already in use...')
                 return render_template('register.html', form=form)
