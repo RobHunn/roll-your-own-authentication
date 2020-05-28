@@ -5,7 +5,7 @@ from models import db, connect_db, User
 from form import RegUserForm, LoginForm
 from flask_debugtoolbar import DebugToolbarExtension
 from werkzeug.exceptions import Unauthorized
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 ###############################################################
 #                     SET ENV VARS                            #
@@ -87,16 +87,13 @@ def register():
 
         try:
             db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            if User.query.get(username):
+        except IntegrityError as error:
+            if any('users_email_key' in value for value in error.orig.args):
+                form.email.errors.append('email already in use...')
+                return render_template('register.html', form=form)
+            else:
                 form.username.errors.append(
                     'Username already taken! #seatsTaken!')
-                return render_template('register.html', form=form)
-
-            elif User.query.get(email):
-                db.session.rollback()
-                form.email.errors.append('email already in use...')
                 return render_template('register.html', form=form)
 
         session['username'] = user.username
@@ -109,7 +106,7 @@ def register():
         return render_template('register.html', form=form)
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@ app.route('/login', methods=['GET', 'POST'])
 def login():
     """ Show login form or hndle login """
 
@@ -134,7 +131,7 @@ def login():
     return render_template("login.html", form=form)
 
 
-@app.route("/logout")
+@ app.route("/logout")
 def logout():
     """Logout route."""
     # [session.pop(key) for key in list(session.keys()) if key != '_flashes']
