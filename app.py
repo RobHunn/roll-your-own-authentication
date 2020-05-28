@@ -5,6 +5,7 @@ from models import db, connect_db, User
 from form import RegUserForm, LoginForm
 from flask_debugtoolbar import DebugToolbarExtension
 from werkzeug.exceptions import Unauthorized
+from sqlalchemy.exc import IntegrityError
 
 ###############################################################
 #                     SET ENV VARS                            #
@@ -51,8 +52,8 @@ def home():
     return redirect("/register")
 
 
-@app.route('/secret/<string:username>')
-def secret_page(username):
+@app.route('/user/<string:username>')
+def user(username):
     if "username" not in session or username != session['username']:
         raise Unauthorized()
     user = (
@@ -66,13 +67,13 @@ def secret_page(username):
         .first()
     )
     print(user)
-    return render_template('secret.html', user=user)
+    return render_template('user.html', user=user)
 
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
     if "username" in session:
-        return redirect(f"/secret/{session['username']}")
+        return redirect(f"/user/{session['username']}")
 
     form = RegUserForm()
     if form.validate_on_submit():
@@ -83,13 +84,17 @@ def register():
         email = form.email.data
 
         user = User.register(username, password, first_name, last_name, email)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            form.username.errors.append('Username already taken! #seatsTaken!')
+            from.email.errors.append('email already in use...')
+            return render_template('register.html', form=form)
         session['username'] = user.username
-
         flash(
             f"User created... first={user.first_name}, last={user.last_name}, email={user.email} username={user.username}"
         )
-        return redirect(url_for("secret_page", username=session['username']))
+        return redirect(url_for("user", username=session['username']))
 
     else:
         return render_template('register.html', form=form)
@@ -100,7 +105,7 @@ def login():
     """ Show login form or hndle login """
 
     if "username" in session:
-        return redirect(f"/secret/{session['username']}")
+        return redirect(f"/user/{session['username']}")
 
     form = LoginForm()
 
@@ -108,11 +113,11 @@ def login():
         username = form.username.data
         password = form.password.data
 
-        user = User.authenticate(username, password)  # <User> or False
+        user = User.authenticate(username, password)
         if user:
+            flash(f"Welcome back {user.username}!")
             session['username'] = user.username
-            # return redirect(f"/users/{user.username}")
-            return redirect(f"/secret/{user.username}")
+            return redirect(f"/user/{user.username}")
         else:
             form.username.errors = ["Invalid username/password."]
             return render_template("login.html", form=form)
