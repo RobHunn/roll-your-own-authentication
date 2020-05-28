@@ -84,12 +84,21 @@ def register():
         email = form.email.data
 
         user = User.register(username, password, first_name, last_name, email)
+
         try:
             db.session.commit()
         except IntegrityError:
-            form.username.errors.append('Username already taken! #seatsTaken!')
-            from.email.errors.append('email already in use...')
-            return render_template('register.html', form=form)
+            if User.query.get(username):
+                db.session.rollback()
+                form.username.errors.append(
+                    'Username already taken! #seatsTaken!')
+                return render_template('register.html', form=form)
+
+            elif User.query.get(username):
+                db.session.rollback()
+                form.email.errors.append('email already in use...')
+                return render_template('register.html', form=form)
+
         session['username'] = user.username
         flash(
             f"User created... first={user.first_name}, last={user.last_name}, email={user.email} username={user.username}"
